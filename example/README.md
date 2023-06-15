@@ -1,0 +1,155 @@
+## main
+
+```python
+# This code was automatically generated from a text file.
+
+from model import Model
+from view import View
+from controller import Controller
+
+if __name__ == '__main__':
+    model = Model()
+    view = View()
+    controller = Controller(model, view)
+    controller.run()
+
+```
+
+## model
+
+```python
+# This code was automatically generated from a text file.
+
+from dataclasses import dataclass
+from enum import Enum
+import random
+
+class Direction(Enum):
+    UP = 1
+    DOWN = 2
+    LEFT = 3
+    RIGHT = 4
+
+@dataclass
+class Snake:
+    body: list
+    direction: Direction
+
+@dataclass
+class Food:
+    x: int
+    y: int
+
+class GameOverException(Exception):
+    pass
+
+class Model:
+    def __init__(self):
+        self.width = 20
+        self.height = 20
+        self.snake = Snake(body=[(self.width//2, self.height//2)], direction=Direction.UP)
+        self.food = self.generate_food()
+        self.score = 0
+
+    def generate_food(self):
+        while True:
+            x = random.randint(0, self.width-1)
+            y = random.randint(0, self.height-1)
+            if (x, y) not in self.snake.body:
+                return Food(x, y)
+
+    def update(self):
+        head_x, head_y = self.snake.body[0]
+        if self.snake.direction == Direction.UP:
+            new_head = (head_x, head_y-1)
+        elif self.snake.direction == Direction.DOWN:
+            new_head = (head_x, head_y+1)
+        elif self.snake.direction == Direction.LEFT:
+            new_head = (head_x-1, head_y)
+        elif self.snake.direction == Direction.RIGHT:
+            new_head = (head_x+1, head_y)
+
+        if new_head in self.snake.body or new_head[0] < 0 or new_head[0] >= self.width or new_head[1] < 0 or new_head[1] >= self.height:
+            raise GameOverException()
+
+        self.snake.body.insert(0, new_head)
+        if new_head == (self.food.x, self.food.y):
+            self.food = self.generate_food()
+            self.score += 1
+        else:
+            self.snake.body.pop()
+
+```
+
+## view
+
+```python
+# This code was automatically generated from a text file.
+
+import pygame
+
+class View:
+    def __init__(self):
+        pygame.init()
+        self.width = 400
+        self.height = 400
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption('Snake')
+        self.font = pygame.font.SysFont('Arial', 20)
+
+    def draw(self, snake, food, score):
+        self.screen.fill((0, 0, 0))
+        for x, y in snake.body:
+            pygame.draw.rect(self.screen, (255, 255, 255), (x*self.width//20, y*self.height//20, self.width//20, self.height//20))
+        pygame.draw.rect(self.screen, (255, 0, 0), (food.x*self.width//20, food.y*self.height//20, self.width//20, self.height//20))
+        score_text = self.font.render(f'Score: {score}', True, (255, 255, 255))
+        self.screen.blit(score_text, (10, 10))
+        pygame.display.update()
+
+    def close(self):
+        pygame.quit()
+
+```
+
+## controller
+
+```python
+# This code was automatically generated from a text file.
+
+import pygame
+from model import Direction, GameOverException
+
+class Controller:
+    def __init__(self, model, view):
+        self.model = model
+        self.view = view
+
+    def run(self):
+        clock = pygame.time.Clock()
+        running = True
+        while running:
+            clock.tick(10)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP and self.model.snake.direction != Direction.DOWN:
+                        self.model.snake.direction = Direction.UP
+                    elif event.key == pygame.K_DOWN and self.model.snake.direction != Direction.UP:
+                        self.model.snake.direction = Direction.DOWN
+                    elif event.key == pygame.K_LEFT and self.model.snake.direction != Direction.RIGHT:
+                        self.model.snake.direction = Direction.LEFT
+                    elif event.key == pygame.K_RIGHT and self.model.snake.direction != Direction.LEFT:
+                        self.model.snake.direction = Direction.RIGHT
+
+            try:
+                self.model.update()
+            except GameOverException:
+                running = False
+
+            self.view.draw(self.model.snake, self.model.food, self.model.score)
+
+        self.view.close()
+
+```
+
